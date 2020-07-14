@@ -6,7 +6,7 @@
                 <van-button round color="rgb(32, 32, 32)" @click="selectAll">全 选</van-button>
                 <van-button round color="rgb(32, 32, 32)" @click="inverseSelection">反 选</van-button>
                 <van-button round color="rgb(32, 32, 32)" @click="unselectAll">取 消</van-button>
-
+            
             </div>
             <div v-mo-loading="loading" mo-loading-background="rgb(93, 94, 96)">
                 <div class="main">
@@ -14,27 +14,27 @@
                         v-for="(item, index) in items"
                         :key="index"
                         size="large"
-                        :class="{'tag-selected': item.selected, 'tag-unselected': !item.selected}"
+                        v-bind:class="{'tag-unselected': !item.selected, 'tag-is-punctuation': isPunctuation(item.word), 'tag-selected': item.selected}"
                         :number="index"
                         @touchstart="onTouchStart"
                         @touchmove.prevent="onTouchMove"
                         v-on-single-tap="onClick"
                         v-on-double-tap="onDoubleClick"
-
+                    
                     >
                         {{item.word}}
                     </van-tag>
-
+                
                 </div>
             </div>
-
+            
             <div class="footer">
                 <van-button v-show="selectedItems.length > 0" round color="rgb(32, 32, 32)" @click="copyText">复 制
                 </van-button>
-
+            
             </div>
         </div>
-
+        
         <van-dialog v-model="dialogShow" title="粘贴文本" @confirm="text=textareaValue" show-cancel-button>
             <label style="margin: .8rem; display: block">
                     <textarea
@@ -48,8 +48,8 @@
                     </textarea>
             </label>
         </van-dialog>
-
-
+    
+    
     </div>
 
 </template>
@@ -57,7 +57,7 @@
 <script>
     import handleClipboard from '@/utils/clipboard'
     import {getSplitWords} from '@/api/big-bang'
-
+    
     export default {
         name: 'BigBang',
         data() {
@@ -72,7 +72,8 @@
                 dialogShow: false,
                 isMounted: false,
                 loading: false,
-
+                punctuationPattern: /[·~！@#￥%…&*（）—\-+=【】{}、|；‘’：“”《》？，。`!$^()_[\]\\;':",./<>?\s]+/
+                
             }
         },
         computed: {
@@ -107,7 +108,7 @@
                 }).then(() => {
                     this.$refs.textarea.focus()
                 })
-
+                
             },
             setWords(text) {
                 this.loading = true
@@ -122,14 +123,19 @@
                     return {word: item, selected: false}
                 })
             },
-
+            
             getItemByElement(element) {
                 return this.items[element.getAttribute('number')]
             },
             getElementIndex(element) {
                 return Number(element.getAttribute('number'))
             },
-
+            
+            isPunctuation(word) {
+                /*判断是否是标点符号或空格*/
+                return this.punctuationPattern.test(word)
+            },
+            
             isSelect(curIndex) {
                 /**
                  * 选择模式下： 整体和局部都向前或向后滑动， 对元素进行选择操作
@@ -143,25 +149,25 @@
                 const isPartMoveForward = curIndex - this.movePreviousIndex > 0
                 return (((isWholeMoveForward && isPartMoveForward) || (!isWholeMoveForward && !isPartMoveForward)) && this.selectMode) || (isWholeMoveForward + isPartMoveForward === 1 && !this.selectMode)
             },
-
+            
             onClick(event) {
                 const index = this.getElementIndex(event.target)
                 this.items[index].selected = !this.items[index].selected
             },
-
+            
             onDoubleClick(event) {
                 const index = this.getElementIndex(event.target)
                 const item = this.items[index]
                 if (item.word.length < 2) {
                     return
                 }
-                const newItems = item.word.split('').map(item=>{
+                const newItems = item.word.split('').map(item => {
                     return {word: item, selected: this.items[index].selected}
                 })
                 const splitItems = this.items.splice(index)
                 this.items = [...this.items, ...newItems, ...splitItems.slice(1)]
             },
-
+            
             onTouchStart(event) {
                 const item = this.getItemByElement(event.target)
                 this.selectMode = !item.selected
@@ -178,11 +184,11 @@
                         this.items[i].selected = this.isSelect(curIndex)
                     }
                     this.movePreviousIndex = curIndex
-
+                    
                 }
             },
             setAllValue(value) {
-                for (let i=0; i<this.items.length; i++){
+                for (let i = 0; i < this.items.length; i++) {
                     this.items[i].selected = value
                 }
             },
@@ -190,7 +196,7 @@
                 this.setAllValue(true)
             },
             inverseSelection() {
-                for (let i=0; i<this.items.length; i++){
+                for (let i = 0; i < this.items.length; i++) {
                     this.items[i].selected = !this.items[i].selected
                 }
             },
@@ -216,8 +222,8 @@
                     },
                 )
             },
-
-
+            
+            
         }
     }
 </script>
@@ -232,20 +238,20 @@
         justify-content: center;
         width: 100%;
         height: 100vh;
-
+        
         .content {
             width: 100%;
-
+            
             .van-button {
                 margin: 0 0.5rem;
                 width: 4.5rem;
                 height: 2rem;
             }
-
+            
             .header {
                 text-align: center;
             }
-
+            
             .main {
                 margin: 4.5vh 0.35rem;
                 padding: 0 0.35rem;
@@ -253,7 +259,10 @@
                 min-height: 30vh;
                 overflow-y: auto;
                 display: flex;
+                display: -webkit-flex;
+                display: -moz-flex;
                 flex-wrap: wrap;
+                /*两端对齐*/
                 justify-content: space-between;
                 align-content: flex-start;
                 /*实现最后一行不要两端对齐，如最后一行只剩两个时不好看*/
@@ -261,29 +270,35 @@
                     content: "";
                     flex: auto;
                 }
-
+                
                 .van-tag {
                     margin: 0.35rem;
                     line-height: 1.5rem;
+                    height: 1.5rem;
                 }
-
-                .tag-selected {
-                    background-color: #F56C6C;
-                    color: white;
-                }
-
+                
                 .tag-unselected {
                     background-color: white;
                     color: black;
                 }
+                
+                .tag-is-punctuation {
+                    background-color: rgb(255, 255, 255, 0.2);
+                    color: black;
+                }
+                
+                .tag-selected {
+                    background-color: #F56C6C;
+                    color: white;
+                }
             }
-
+            
             .footer {
                 text-align: center;
                 height: 2rem;
             }
         }
-
+        
         .van-loading {
             z-index: 1;
             position: absolute;
